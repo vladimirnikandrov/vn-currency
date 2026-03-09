@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency Converter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 12px;
+  }
+  .converter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 720px;
+    padding: 14px 20px;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    background: #fafafa;
+  }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #999;
+    font-weight: 500;
+  }
+  input[type="number"] {
+    width: 110px;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { border-color: #bbb; }
+  select {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 26px;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: #bbb; }
+  .swap {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s;
+    margin-top: 14px;
+  }
+  .swap:hover { background: #f0f0f0; border-color: #ccc; }
+  .swap svg { width: 14px; height: 14px; stroke: #888; }
+  .result-box {
+    flex: 1;
+    text-align: right;
+    margin-top: 14px;
+  }
+  .result-value {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1a1a1a;
+    letter-spacing: -0.3px;
+  }
+  .result-rate {
+    font-size: 10px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+  @media (max-width: 600px) {
+    .converter { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+    input[type="number"] { width: 90px; }
+    .result-box { text-align: left; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="converter">
+  <div class="field">
+    <label>Amount</label>
+    <input type="number" id="amount" value="1000" min="0" step="any">
+  </div>
+  <div class="field">
+    <label>From</label>
+    <select id="from">
+      <option value="EUR" selected>EUR</option>
+      <option value="USD">USD</option>
+      <option value="RUB">RUB</option>
+      <option value="AED">AED</option>
+    </select>
+  </div>
+  <button class="swap" id="swap" title="Swap currencies">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 16l-4-4 4-4"/><path d="M17 8l4 4-4 4"/><line x1="3" y1="12" x2="21" y2="12"/>
+    </svg>
+  </button>
+  <div class="field">
+    <label>To</label>
+    <select id="to">
+      <option value="EUR">EUR</option>
+      <option value="USD" selected>USD</option>
+      <option value="RUB">RUB</option>
+      <option value="AED">AED</option>
+    </select>
+  </div>
+  <div class="result-box">
+    <div class="result-value" id="result">—</div>
+    <div class="result-rate" id="rate"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let rates = {};
+let lastUpdate = '';
+
+const symbols = { EUR: '€', USD: '$', RUB: '₽', AED: 'د.إ' };
+
+function fmt(n, currency) {
+  if (n >= 10000) return n.toLocaleString('en', { maximumFractionDigits: 0 });
+  if (n >= 100) return n.toLocaleString('en', { maximumFractionDigits: 1 });
+  return n.toLocaleString('en', { maximumFractionDigits: 2 });
+}
+
+async function fetchRates() {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/EUR');
+    const data = await res.json();
+    if (data.result === 'success') {
+      rates = { EUR: 1, USD: data.rates.USD, RUB: data.rates.RUB, AED: data.rates.AED };
+      lastUpdate = data.time_last_update_utc
+        ? new Date(data.time_last_update_utc).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+        : new Date().toISOString().slice(0, 10);
+      convert();
+      return;
+    }
+  } catch {}
+  $('rate').textContent = 'Rate update failed — check connection';
+}
+
+function convert() {
+  const from = $('from').value;
+  const to = $('to').value;
+  const amount = parseFloat($('amount').value) || 0;
+  if (!rates[from] || !rates[to]) return;
+
+  const rateFrom = from === 'EUR' ? 1 : rates[from];
+  const rateTo = to === 'EUR' ? 1 : rates[to];
+  if (!rateFrom || !rateTo) return;
+
+  const crossRate = rateTo / rateFrom;
+  const result = amount * crossRate;
+
+  $('result').textContent = `${symbols[to] || ''} ${fmt(result, to)}`;
+  $('rate').textContent = `1 ${from} = ${crossRate >= 100 ? crossRate.toFixed(1) : crossRate.toFixed(4)} ${to} · ${lastUpdate}`;
+}
+
+$('amount').addEventListener('input', convert);
+$('from').addEventListener('change', convert);
+$('to').addEventListener('change', convert);
+$('swap').addEventListener('click', () => {
+  const f = $('from').value;
+  $('from').value = $('to').value;
+  $('to').value = f;
+  convert();
+});
+
+fetchRates();
+setInterval(fetchRates, 3600000);
+</script>
+</body>
+</html>
