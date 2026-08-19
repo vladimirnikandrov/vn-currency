@@ -149,6 +149,13 @@ body {
   color: transparent;
 }
 
+/* Embedded in a Notion block the viewport can be shorter than the card.
+   Centering would then clip it at both ends, so hug the top and tighten up:
+   the query and the number stay visible even in a block sized too small. */
+@media (max-height: 280px) {
+  body { padding: 8px; align-items: start; }
+}
+
 @media (max-width: 420px) {
   body { padding: 16px; }
   .result { font-size: 24px; line-height: 32px; min-height: 32px; letter-spacing: -0.01em; }
