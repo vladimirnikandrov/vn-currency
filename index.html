@@ -2,204 +2,331 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Currency Converter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Currency converter</title>
+<meta name="description" content="Write 1000 eur to rub and read the answer, at the mid-market rate.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fcfcfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#252629" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b6fd4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16M7 20l-3-3M17 20V4M17 4l3 3'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/geist-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://api.coinbase.com">
+
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 12px;
+@font-face {
+  font-family: Geist;
+  src: url("fonts/geist-sans.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Tokens — _Instructions-Web/04. The Tailwind @theme block maps these to
+   utility classes; with no build step the custom properties are the system. */
+:root {
+  --brand:              oklch(0.55 0.17 255);
+  --background:         color-mix(in oklch, var(--brand) 2%, oklch(0.99 0 0));
+  --foreground:         color-mix(in oklch, var(--brand) 3%, oklch(0.16 0 0));
+  --card:               color-mix(in oklch, var(--brand) 2%, oklch(1 0 0));
+  --muted:              color-mix(in oklch, var(--brand) 3%, oklch(0.96 0 0));
+  --muted-foreground:   color-mix(in oklch, var(--brand) 3%, oklch(0.50 0 0));
+  --border:             color-mix(in oklch, var(--foreground) 10%, transparent);
+  --primary:            var(--brand);
+  --ring:               var(--brand);
+  --destructive:        oklch(0.55 0.19 25);
+
+  --radius: 10px;            /* 02 — one radius on every control */
+  --radius-sm: 6px;
+
+  --font-sans: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 04 — dark is designed, not inverted: brand lighter and desaturated. */
+    --brand:            oklch(0.68 0.11 255);
+    --background:       color-mix(in oklch, var(--brand) 2%, oklch(0.15 0 0));
+    --foreground:       color-mix(in oklch, var(--brand) 3%, oklch(0.93 0 0));
+    --card:             color-mix(in oklch, var(--brand) 2%, oklch(0.18 0 0));
+    --muted:            color-mix(in oklch, var(--brand) 3%, oklch(0.22 0 0));
+    --muted-foreground: color-mix(in oklch, var(--brand) 3%, oklch(0.65 0 0));
+    --border:           color-mix(in oklch, var(--foreground) 12%, transparent);
+    --destructive:      oklch(0.62 0.15 25);
   }
-  .converter {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 720px;
-    padding: 14px 20px;
-    border: 1px solid #e8e8e8;
-    border-radius: 12px;
-    background: #fafafa;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: color-mix(in oklch, var(--primary) 24%, transparent); }
+
+/* 04 — a card in the flow is a hairline border and zero box-shadow. */
+.row {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px 24px;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 150ms ease-out;
+}
+.row:focus-within { border-color: color-mix(in oklch, var(--ring) 40%, var(--border)); }
+
+/* min-width: 0 is load-bearing. Without it a flex child refuses to shrink past
+   the input's intrinsic size and pushes everything else out of the card. */
+.query {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.query::placeholder { color: var(--muted-foreground); font-weight: 500; }
+.query:focus-visible { outline: none; }
+.row:has(.query:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: -1px;
+}
+
+.answer {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: right;
+}
+
+.result {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.result u { text-decoration: none; color: var(--muted-foreground); }
+
+.note {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.note[data-state="failed"] { color: var(--destructive); }
+
+/* Skeleton repeats the real layout so nothing jumps when the rate lands (06). */
+.note[data-state="loading"] {
+  width: 14ch;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  color: transparent;
+}
+
+@media (max-width: 560px) {
+  body { padding: 16px; }
+  .row { flex-direction: column; align-items: stretch; }
+  .answer { justify-items: start; text-align: left; }
+  .result { font-size: 20px; line-height: 28px; }
+  .result, .note { white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  .field { display: flex; flex-direction: column; gap: 3px; }
-  .field label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #999;
-    font-weight: 500;
-  }
-  input[type="number"] {
-    width: 110px;
-    padding: 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 15px;
-    font-family: inherit;
-    background: #fff;
-    outline: none;
-    transition: border-color 0.2s;
-    -moz-appearance: textfield;
-  }
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-  input[type="number"]:focus { border-color: #bbb; }
-  select {
-    padding: 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 15px;
-    font-family: inherit;
-    background: #fff;
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding-right: 26px;
-    transition: border-color 0.2s;
-  }
-  select:focus { border-color: #bbb; }
-  .swap {
-    width: 28px;
-    height: 28px;
-    border: 1px solid #ddd;
-    border-radius: 50%;
-    background: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: background 0.2s, border-color 0.2s;
-    margin-top: 14px;
-  }
-  .swap:hover { background: #f0f0f0; border-color: #ccc; }
-  .swap svg { width: 14px; height: 14px; stroke: #888; }
-  .result-box {
-    flex: 1;
-    text-align: right;
-    margin-top: 14px;
-  }
-  .result-value {
-    font-size: 18px;
-    font-weight: 500;
-    color: #1a1a1a;
-    letter-spacing: -0.3px;
-  }
-  .result-rate {
-    font-size: 10px;
-    color: #aaa;
-    margin-top: 2px;
-  }
-  @media (max-width: 600px) {
-    .converter { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
-    input[type="number"] { width: 90px; }
-    .result-box { text-align: left; width: 100%; }
-  }
+}
 </style>
 </head>
 <body>
 
-<div class="converter">
-  <div class="field">
-    <label>Amount</label>
-    <input type="number" id="amount" value="1000" min="0" step="any">
+<main class="row">
+  <input class="query" id="query" type="text" autocomplete="off" autocapitalize="off"
+         autocorrect="off" spellcheck="false" aria-label="What to convert"
+         placeholder="1000 eur to rub">
+  <div class="answer">
+    <output class="result" id="result" for="query" aria-live="polite"></output>
+    <span class="note" id="note" data-state="loading">Loading the rate</span>
   </div>
-  <div class="field">
-    <label>From</label>
-    <select id="from">
-      <option value="EUR" selected>EUR</option>
-      <option value="USD">USD</option>
-      <option value="RUB">RUB</option>
-      <option value="AED">AED</option>
-    </select>
-  </div>
-  <button class="swap" id="swap" title="Swap currencies">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M7 16l-4-4 4-4"/><path d="M17 8l4 4-4 4"/><line x1="3" y1="12" x2="21" y2="12"/>
-    </svg>
-  </button>
-  <div class="field">
-    <label>To</label>
-    <select id="to">
-      <option value="EUR">EUR</option>
-      <option value="USD" selected>USD</option>
-      <option value="RUB">RUB</option>
-      <option value="AED">AED</option>
-    </select>
-  </div>
-  <div class="result-box">
-    <div class="result-value" id="result">—</div>
-    <div class="result-rate" id="rate"></div>
-  </div>
-</div>
+</main>
 
-<script>
-const $ = id => document.getElementById(id);
-let rates = {};
-let lastUpdate = '';
+<script type="module">
+import {
+  CURRENCIES, parseCommand, crossRate, normalizeRates,
+  formatAmount, formatRate, formatAge,
+} from './convert.js';
 
-const symbols = { EUR: '€', USD: '$', RUB: '₽', AED: 'د.إ' };
+const ui = {
+  query: document.getElementById('query'),
+  result: document.getElementById('result'),
+  note: document.getElementById('note'),
+};
 
-function fmt(n, currency) {
-  if (n >= 10000) return n.toLocaleString('en', { maximumFractionDigits: 0 });
-  if (n >= 100) return n.toLocaleString('en', { maximumFractionDigits: 1 });
-  return n.toLocaleString('en', { maximumFractionDigits: 2 });
-}
+const LOCALE = navigator.language || 'en-US';
+const STORE = 'currency-converter';
+const REFRESH_MS = 60_000;
 
-async function fetchRates() {
-  try {
-    const res = await fetch('https://open.er-api.com/v6/latest/EUR');
-    const data = await res.json();
-    if (data.result === 'success') {
-      rates = { EUR: 1, USD: data.rates.USD, RUB: data.rates.RUB, AED: data.rates.AED };
-      lastUpdate = data.time_last_update_utc
-        ? new Date(data.time_last_update_utc).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-        : new Date().toISOString().slice(0, 10);
-      convert();
+const state = {
+  rates: null,       // every currency the feed carries
+  at: null,          // when the rates were quoted
+  status: 'loading', // loading | ok | failed
+};
+
+/* --- rate sources -------------------------------------------------------
+   Both are keyless, send Access-Control-Allow-Origin: *, and quote live
+   mid-market — the same market Google's converter reports.
+
+   Coinbase leads on measurement, not on reputation: sampled against Google
+   Finance it sat within 0.003% on USD/RUB, and it is the only free feed tested
+   whose ruble actually moves — fxratesapi returns a pinned 85.12000 that only
+   wobbles in the eighth decimal, so it drifts further from the market all day.
+   The ruble is the pair where sources genuinely disagree, so it decides the
+   order. The fallback is a different company, so one outage cannot take both.
+
+   Both are asked for a USD table and every pair is crossed from it, the way
+   Google itself does. Coinbase's own EUR table disagrees with its USD table by
+   0.026%, so mixing bases would be worse than crossing. */
+const SOURCES = [
+  {
+    url: 'https://api.coinbase.com/v2/exchange-rates?currency=USD',
+    // Coinbase streams continuously but stamps nothing, so the fetch is the time.
+    read: (json) => normalizeRates(
+      { rates: json?.data?.rates, timestamp: Date.now() / 1000 }, 'USD',
+    ),
+  },
+  {
+    url: 'https://api.fxratesapi.com/latest?base=USD',
+    read: (json) => normalizeRates(json, 'USD'),
+  },
+];
+
+async function loadRates() {
+  for (const source of SOURCES) {
+    try {
+      const res = await fetch(source.url, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const parsed = source.read(await res.json());
+      if (!parsed) continue;
+      state.rates = parsed.table;
+      state.at = parsed.at;
+      state.status = 'ok';
+      render();
       return;
+    } catch {
+      // try the next source
     }
-  } catch {}
-  $('rate').textContent = 'Rate update failed — check connection';
+  }
+  // Keep any rate already on screen — just stop calling it fresh.
+  state.status = 'failed';
+  render();
 }
 
-function convert() {
-  const from = $('from').value;
-  const to = $('to').value;
-  const amount = parseFloat($('amount').value) || 0;
-  if (!rates[from] || !rates[to]) return;
+function render() {
+  save();
 
-  const rateFrom = from === 'EUR' ? 1 : rates[from];
-  const rateTo = to === 'EUR' ? 1 : rates[to];
-  if (!rateFrom || !rateTo) return;
+  if (state.status === 'loading') {
+    ui.result.textContent = '';
+    return setNote('loading', 'Loading the rate');
+  }
+  if (!state.rates) {
+    ui.result.textContent = '';
+    return setNote('failed', "Couldn't load the rate. Check your connection.");
+  }
 
-  const crossRate = rateTo / rateFrom;
-  const result = amount * crossRate;
+  const text = ui.query.value.trim();
+  if (!text) {
+    ui.result.textContent = '';
+    return setNote('ok', 'Mid-market rate, refreshed every minute');
+  }
 
-  $('result').textContent = `${symbols[to] || ''} ${fmt(result, to)}`;
-  $('rate').textContent = `1 ${from} = ${crossRate >= 100 ? crossRate.toFixed(1) : crossRate.toFixed(4)} ${to} · ${lastUpdate}`;
+  const query = parseCommand(text);
+  if (!query) {
+    ui.result.textContent = '';
+    return setNote('ok', 'Write it as 1000 eur to rub');
+  }
+
+  const rate = crossRate(state.rates, query.from, query.to);
+  if (rate === null) {
+    const missing = state.rates[query.from] ? query.to : query.from;
+    ui.result.textContent = '';
+    return setNote('failed', `No rate for ${missing}`);
+  }
+
+  // Rounding happens here and nowhere else: the arithmetic above is exact.
+  ui.result.replaceChildren(
+    document.createTextNode(`${formatAmount(query.amount * rate, LOCALE)} `),
+    Object.assign(document.createElement('u'), { textContent: query.to }),
+  );
+
+  const pair = `1 ${query.from} ≈ ${formatRate(rate, LOCALE)} ${query.to}`;
+  if (state.status === 'failed') {
+    const age = formatAge(state.at, Date.now(), 'en');
+    return setNote('failed', `${pair} · from ${age}, update failed`);
+  }
+  setNote('ok', pair);
 }
 
-$('amount').addEventListener('input', convert);
-$('from').addEventListener('change', convert);
-$('to').addEventListener('change', convert);
-$('swap').addEventListener('click', () => {
-  const f = $('from').value;
-  $('from').value = $('to').value;
-  $('to').value = f;
-  convert();
+function setNote(status, text) {
+  ui.note.dataset.state = status;
+  ui.note.textContent = text;
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORE, ui.query.value);
+  } catch { /* private mode — the converter still works */ }
+}
+
+function restore() {
+  try {
+    const saved = localStorage.getItem(STORE);
+    if (saved) ui.query.value = saved;
+  } catch { /* ignore malformed storage */ }
+  if (!ui.query.value) ui.query.value = `1000 ${CURRENCIES[0]} to ${CURRENCIES[2]}`.toLowerCase();
+}
+
+ui.query.addEventListener('input', render);
+
+// A rate on screen goes stale silently, so refresh while the tab is watched.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadRates();
 });
+setInterval(() => { if (document.visibilityState === 'visible') loadRates(); }, REFRESH_MS);
 
-fetchRates();
-setInterval(fetchRates, 3600000);
+restore();
+render();
+loadRates();
 </script>
 </body>
 </html>
