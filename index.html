@@ -6,9 +6,7 @@
 <title>Currency converter</title>
 <meta name="description" content="Write 1000 eur to rub and read the answer, at the mid-market rate.">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#fcfcfd" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#252629" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b6fd4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16M7 20l-3-3M17 20V4M17 4l3 3'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16M7 20l-3-3M17 20V4M17 4l3 3'/%3E%3C/svg%3E">
 <link rel="preload" href="fonts/geist-sans.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://api.coinbase.com">
 
@@ -19,76 +17,51 @@
   font-weight: 100 900;
   font-display: swap;
 }
-/* Tokens — _Instructions-Web/04. The Tailwind @theme block maps these to
-   utility classes; with no build step the custom properties are the system. */
+
+/* Two values, no palette. Nothing is painted: the block's own colour shows
+   through, so the embed sits in the page instead of stamping a panel onto it. */
 :root {
-  --brand:              oklch(0.55 0.17 255);
-  --background:         color-mix(in oklch, var(--brand) 2%, oklch(0.99 0 0));
-  --foreground:         color-mix(in oklch, var(--brand) 3%, oklch(0.16 0 0));
-  --card:               color-mix(in oklch, var(--brand) 2%, oklch(1 0 0));
-  --muted:              color-mix(in oklch, var(--brand) 3%, oklch(0.96 0 0));
-  --muted-foreground:   color-mix(in oklch, var(--brand) 3%, oklch(0.50 0 0));
-  --border:             color-mix(in oklch, var(--foreground) 10%, transparent);
-  --primary:            var(--brand);
-  --ring:               var(--brand);
-  --destructive:        oklch(0.55 0.19 25);
-
-  --radius: 10px;            /* 02 — one radius on every control */
-  --radius-sm: 6px;
-
+  --ink: #000;
   --font-sans: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* With no fill of its own, the ink has to follow the host: on a dark page
+   black on dark would be invisible, so it inverts to white. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* 04 — dark is designed, not inverted: brand lighter and desaturated. */
-    --brand:            oklch(0.68 0.11 255);
-    --background:       color-mix(in oklch, var(--brand) 2%, oklch(0.15 0 0));
-    --foreground:       color-mix(in oklch, var(--brand) 3%, oklch(0.93 0 0));
-    --card:             color-mix(in oklch, var(--brand) 2%, oklch(0.18 0 0));
-    --muted:            color-mix(in oklch, var(--brand) 3%, oklch(0.22 0 0));
-    --muted-foreground: color-mix(in oklch, var(--brand) 3%, oklch(0.65 0 0));
-    --border:           color-mix(in oklch, var(--foreground) 12%, transparent);
-    --destructive:      oklch(0.62 0.15 25);
-  }
+  :root { --ink: #fff; }
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body { height: 100%; }
+
+/* Transparent, not white: the embed shows the host page through its corners
+   instead of stamping a panel onto it. */
 body {
-  min-height: 100svh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: var(--background);
-  color: var(--foreground);
+  background: transparent;
+  color: var(--ink);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 20px;
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: color-mix(in oklch, var(--primary) 24%, transparent); }
+::selection { background: var(--ink); color: canvas; }
 
-/* 04 — a card in the flow is a hairline border and zero box-shadow.
-   Narrow on purpose: a wide row puts a void between the question and the
-   answer, and the void was the thing that read as unfinished. */
+/* The card IS the frame — it fills the block edge to edge, so the border the
+   embed shows is this border and there is nothing around it. */
 .card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: border-color 150ms ease-out;
+  min-height: 100%;
+  display: grid;
+  align-content: start;
+  background: transparent;
+  border: 1px solid var(--ink);
 }
-.card:focus-within { border-color: color-mix(in oklch, var(--ring) 45%, var(--border)); }
-.card:has(.query:focus-visible) { outline: 2px solid var(--ring); outline-offset: -1px; }
 
 .ask { padding: 16px; }
 
 /* min-width: 0 is load-bearing wherever this input sits in a flex or grid:
-   without it the field refuses to shrink past its intrinsic size and pushes
-   everything else out of the card. */
+   without it the field refuses to shrink past its intrinsic size. */
 .query {
   display: block;
   width: 100%;
@@ -103,22 +76,23 @@ body {
   line-height: 24px;
   font-variant-numeric: tabular-nums;
 }
-.query::placeholder { color: var(--muted-foreground); font-weight: 500; }
+.query::placeholder { color: var(--ink); opacity: 0.4; font-weight: 500; }
 .query:focus-visible { outline: none; }
+.card:has(.query:focus-visible) { outline: 2px solid var(--ink); outline-offset: -1px; }
 
 /* Every row keeps its height whether or not it has content, so deleting the
    query cannot make the card resize under the cursor. */
 .answer {
   padding: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--ink);
   display: grid;
-  gap: 4px;              /* 02 — caption sits 4px under its value */
+  gap: 4px;
 }
 
 .result {
   min-height: 36px;
-  /* An absurd amount must not wrap: the card height is a promise, and a
-     truncated number would be a wrong number, so it scrolls in place (02). */
+  /* An absurd amount must not wrap: the height is a promise, and a truncated
+     number would be a wrong number, so it scrolls in place. */
   white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
@@ -128,36 +102,30 @@ body {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.result u { text-decoration: none; color: var(--muted-foreground); }
+/* The currency code steps back by weight, since there is no grey to use. */
+.result u { text-decoration: none; font-weight: 400; }
 /* An empty answer box reads as broken; an em dash reads as "nothing yet". */
-.result:empty::before { content: "—"; color: var(--muted-foreground); }
+.result:empty::before { content: "—"; opacity: 0.4; }
 
 .note {
   min-height: 20px;
   font-size: 13px;
   line-height: 20px;
-  color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  opacity: 0.6;
 }
-.note[data-state="failed"] { color: var(--destructive); }
+/* No colour left to carry an error, so it carries weight instead. */
+.note[data-state="failed"] { opacity: 1; font-weight: 500; }
 
-/* Skeleton repeats the real layout so nothing jumps when the rate lands (06). */
+/* Skeleton repeats the real layout so nothing jumps when the rate lands. */
 .note[data-state="loading"] {
   width: 14ch;
-  border-radius: var(--radius-sm);
-  background: var(--muted);
+  background: var(--ink);
+  opacity: 0.1;
   color: transparent;
 }
 
-/* Embedded in a Notion block the viewport can be shorter than the card.
-   Centering would then clip it at both ends, so hug the top and tighten up:
-   the query and the number stay visible even in a block sized too small. */
-@media (max-height: 280px) {
-  body { padding: 8px; align-items: start; }
-}
-
 @media (max-width: 420px) {
-  body { padding: 16px; }
   .result { font-size: 24px; line-height: 32px; min-height: 32px; letter-spacing: -0.01em; }
 }
 
