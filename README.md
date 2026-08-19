@@ -47,7 +47,7 @@ Rates round to the **nearest** three significant figures, not up, and carry a `â
     index.html      markup, styles, and the DOM wiring
     convert.js      pure parsing, cross-rate and formatting helpers
     selftest.mjs    node selftest.mjs â€” asserts the money math
-    fonts/          Geist Sans and Mono, subset to the glyphs used
+    fonts/          Geist Sans, subset to the glyphs used
 
 No build step, no dependencies. Open `index.html` through any static server; ES modules will not load over `file://`.
 
