@@ -70,69 +70,74 @@ body {
 
 ::selection { background: color-mix(in oklch, var(--primary) 24%, transparent); }
 
-/* 04 — a card in the flow is a hairline border and zero box-shadow. */
-.row {
+/* 04 — a card in the flow is a hairline border and zero box-shadow.
+   Narrow on purpose: a wide row puts a void between the question and the
+   answer, and the void was the thing that read as unfinished. */
+.card {
   width: 100%;
-  max-width: 720px;
-  display: flex;
-  align-items: baseline;
-  gap: 16px 24px;
-  padding: 16px 20px;
+  max-width: 420px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   transition: border-color 150ms ease-out;
 }
-.row:focus-within { border-color: color-mix(in oklch, var(--ring) 40%, var(--border)); }
+.card:focus-within { border-color: color-mix(in oklch, var(--ring) 45%, var(--border)); }
+.card:has(.query:focus-visible) { outline: 2px solid var(--ring); outline-offset: -1px; }
 
-/* min-width: 0 is load-bearing. Without it a flex child refuses to shrink past
-   the input's intrinsic size and pushes everything else out of the card. */
+.ask { padding: 16px; }
+
+/* min-width: 0 is load-bearing wherever this input sits in a flex or grid:
+   without it the field refuses to shrink past its intrinsic size and pushes
+   everything else out of the card. */
 .query {
-  flex: 1 1 auto;
+  display: block;
+  width: 100%;
   min-width: 0;
   border: 0;
   padding: 0;
   background: none;
   color: inherit;
   font-family: inherit;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 28px;
-  letter-spacing: -0.01em;
+  line-height: 24px;
   font-variant-numeric: tabular-nums;
 }
 .query::placeholder { color: var(--muted-foreground); font-weight: 500; }
 .query:focus-visible { outline: none; }
-.row:has(.query:focus-visible) {
-  outline: 2px solid var(--ring);
-  outline-offset: -1px;
-}
 
+/* Every row keeps its height whether or not it has content, so deleting the
+   query cannot make the card resize under the cursor. */
 .answer {
-  flex: 0 1 auto;
-  min-width: 0;
+  padding: 16px;
+  border-top: 1px solid var(--border);
   display: grid;
-  gap: 2px;
-  justify-items: end;
-  text-align: right;
+  gap: 4px;              /* 02 — caption sits 4px under its value */
 }
 
 .result {
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 32px;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
+  min-height: 36px;
+  /* An absurd amount must not wrap: the card height is a promise, and a
+     truncated number would be a wrong number, so it scrolls in place (02). */
   white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 36px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .result u { text-decoration: none; color: var(--muted-foreground); }
+/* An empty answer box reads as broken; an em dash reads as "nothing yet". */
+.result:empty::before { content: "—"; color: var(--muted-foreground); }
 
 .note {
+  min-height: 20px;
   font-size: 13px;
   line-height: 20px;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 .note[data-state="failed"] { color: var(--destructive); }
 
@@ -144,12 +149,9 @@ body {
   color: transparent;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 420px) {
   body { padding: 16px; }
-  .row { flex-direction: column; align-items: stretch; }
-  .answer { justify-items: start; text-align: left; }
-  .result { font-size: 20px; line-height: 28px; }
-  .result, .note { white-space: normal; }
+  .result { font-size: 24px; line-height: 32px; min-height: 32px; letter-spacing: -0.01em; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -163,10 +165,12 @@ body {
 </head>
 <body>
 
-<main class="row">
-  <input class="query" id="query" type="text" autocomplete="off" autocapitalize="off"
-         autocorrect="off" spellcheck="false" aria-label="What to convert"
-         placeholder="1000 eur to rub">
+<main class="card">
+  <div class="ask">
+    <input class="query" id="query" type="text" autocomplete="off" autocapitalize="off"
+           autocorrect="off" spellcheck="false" aria-label="What to convert"
+           placeholder="1000 eur to rub">
+  </div>
   <div class="answer">
     <output class="result" id="result" for="query" aria-live="polite"></output>
     <span class="note" id="note" data-state="loading">Loading the rate</span>
@@ -248,30 +252,30 @@ function render() {
   save();
 
   if (state.status === 'loading') {
-    ui.result.textContent = '';
+    ui.result.replaceChildren();
     return setNote('loading', 'Loading the rate');
   }
   if (!state.rates) {
-    ui.result.textContent = '';
+    ui.result.replaceChildren();
     return setNote('failed', "Couldn't load the rate. Check your connection.");
   }
 
   const text = ui.query.value.trim();
   if (!text) {
-    ui.result.textContent = '';
+    ui.result.replaceChildren();
     return setNote('ok', 'Mid-market rate, refreshed every minute');
   }
 
   const query = parseCommand(text);
   if (!query) {
-    ui.result.textContent = '';
+    ui.result.replaceChildren();
     return setNote('ok', 'Write it as 1000 eur to rub');
   }
 
   const rate = crossRate(state.rates, query.from, query.to);
   if (rate === null) {
     const missing = state.rates[query.from] ? query.to : query.from;
-    ui.result.textContent = '';
+    ui.result.replaceChildren();
     return setNote('failed', `No rate for ${missing}`);
   }
 

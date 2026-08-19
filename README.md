@@ -2,7 +2,7 @@
 
 One line in, one line out. Write `1000 eur to rub` and read the answer.
 
-**Live:** https://vladimirnikandrov.github.io/currency-converter/
+**Live:** https://vladimirnikandrov.github.io/vn-currency/
 
     1000 eur to rub          →   98,879 RUB
     100000 rub to eur        →   1,012 EUR
@@ -24,15 +24,22 @@ Google's converter reports Morningstar's mid-market rate, refreshed about once a
 
 Both are asked for a USD table and every pair is crossed from it, the way Google itself derives AED/RUB from the dollar peg. Mixing bases would be worse: Coinbase's own EUR table disagrees with its USD table by 0.026%.
 
-Measured against Google Finance on 19 Aug 2026:
+Measured against Google Finance on 19 Aug 2026 — 26 paired reads of EUR/RUB, 20 seconds apart, over nine minutes:
 
-| Pair | Google | This converter | Previously |
-|---|---|---|---|
-| EUR/USD | 1.159743 | 1.159914 (+0.015%) | 1.157588 (−0.19%) |
-| USD/RUB | 85.198200 | 85.195379 (−0.003%) | 85.002840 (−0.23%) |
-| USD/AED | 3.672500 | 3.672550 (+0.001%) | — |
+| | Gap to Google |
+|---|---|
+| Coinbase, crossed through USD (shipped) | +0.040% min, **+0.065% mean**, +0.078% max |
+| Coinbase, EUR base directly | +0.068% |
+| fawazahmed0 | −0.071% |
+| open.er-api (the old build) | −0.118% |
 
-The old build used a feed frozen at 00:02 UTC each day, so its error grew as the session went on. On 1000 EUR that was about $2.85 off; it is now around two cents.
+A single sample can look far better than that — one read showed +0.0155% — but the sustained figure is the honest one: **typically under 0.1%**, about 65 ₽ on 1000 EUR. The old build's error was worse and, being a once-daily fix, grew through the session instead of oscillating.
+
+This is not Google's number and cannot become one. Google's converter reads Morningstar; every keyless feed is an independent aggregator of the same market. Two live feeds disagree by hundredths of a percent, and for RUB especially, since 2022 it no longer trades on major venues, so Morningstar, Coinbase and the CBR fix genuinely differ rather than one being wrong.
+
+Nor is "byte-identical to Google" a coherent target: Google serves the same tick at two precisions from one second to the next — 98.5032432 and 98.5032, 98.5184791 and 98.5185 — while its printed UI rounds to four decimals anyway.
+
+Google produces about one genuine move every 75–90 seconds, so this polls every 60 seconds while the tab is open, and again the moment you return to it. Faster polling returns the identical number.
 
 ## Rounding
 
