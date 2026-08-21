@@ -18,25 +18,31 @@
   font-display: swap;
 }
 
-/* Two values, no palette. Nothing is painted: the block's own colour shows
-   through, so the embed sits in the page instead of stamping a panel onto it. */
+/* Monochrome, but not blunt: black at three strengths, the way the palette
+   used greys before. A 100% black hairline reads as a crude box; the border
+   is the same 12% it always was, just black instead of tinted. */
 :root {
-  --ink: #000;
+  --ink:   #000;
+  --muted: rgba(0, 0, 0, 0.55);
+  --line:  rgba(0, 0, 0, 0.14);
+  --radius: 10px;
   --font-sans: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* With no fill of its own, the ink has to follow the host: on a dark page
    black on dark would be invisible, so it inverts to white. */
 @media (prefers-color-scheme: dark) {
-  :root { --ink: #fff; }
+  :root {
+    --ink:   #fff;
+    --muted: rgba(255, 255, 255, 0.6);
+    --line:  rgba(255, 255, 255, 0.18);
+  }
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { height: 100%; }
-
-/* Transparent, not white: the embed shows the host page through its corners
-   instead of stamping a panel onto it. */
+/* Transparent, and no padding: the card sits flush in the block with nothing
+   around it, so whatever colour the host page is shows through. */
 body {
   background: transparent;
   color: var(--ink);
@@ -48,14 +54,13 @@ body {
 
 ::selection { background: var(--ink); color: canvas; }
 
-/* The card IS the frame — it fills the block edge to edge, so the border the
-   embed shows is this border and there is nothing around it. */
+/* Its own height, never the block's: stretching to fill turned a tall Notion
+   block into a mostly empty box. Extra height below it stays transparent. */
 .card {
-  min-height: 100%;
   display: grid;
-  align-content: start;
   background: transparent;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
 
 .ask { padding: 16px; }
@@ -76,7 +81,7 @@ body {
   line-height: 24px;
   font-variant-numeric: tabular-nums;
 }
-.query::placeholder { color: var(--ink); opacity: 0.4; font-weight: 500; }
+.query::placeholder { color: var(--muted); font-weight: 500; }
 .query:focus-visible { outline: none; }
 .card:has(.query:focus-visible) { outline: 2px solid var(--ink); outline-offset: -1px; }
 
@@ -84,7 +89,7 @@ body {
    query cannot make the card resize under the cursor. */
 .answer {
   padding: 16px;
-  border-top: 1px solid var(--ink);
+  border-top: 1px solid var(--line);
   display: grid;
   gap: 4px;
 }
@@ -102,26 +107,25 @@ body {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-/* The currency code steps back by weight, since there is no grey to use. */
-.result u { text-decoration: none; font-weight: 400; }
+.result u { text-decoration: none; color: var(--muted); }
 /* An empty answer box reads as broken; an em dash reads as "nothing yet". */
-.result:empty::before { content: "—"; opacity: 0.4; }
+.result:empty::before { content: "—"; color: var(--muted); }
 
 .note {
   min-height: 20px;
   font-size: 13px;
   line-height: 20px;
   font-variant-numeric: tabular-nums;
-  opacity: 0.6;
+  color: var(--muted);
 }
 /* No colour left to carry an error, so it carries weight instead. */
-.note[data-state="failed"] { opacity: 1; font-weight: 500; }
+.note[data-state="failed"] { color: var(--ink); font-weight: 500; }
 
 /* Skeleton repeats the real layout so nothing jumps when the rate lands. */
 .note[data-state="loading"] {
   width: 14ch;
-  background: var(--ink);
-  opacity: 0.1;
+  border-radius: 6px;
+  background: var(--line);
   color: transparent;
 }
 
